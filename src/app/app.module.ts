@@ -12,6 +12,7 @@ import { Ng2PdfViewerComponent } from './ng2-pdf-viewer/ng2-pdf-viewer.component
 import { PdfViewerModule } from 'ng2-pdf-viewer';
 import { DragResizeAnnoComponent } from './drag-resize-anno/drag-resize-anno.component'; 
 import { ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,8 @@ import { ReactiveFormsModule } from '@angular/forms';
     AngularMaterialModule,
     FormsModule,
     PdfViewerModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    HttpClientModule
   ],
   providers: [],
   bootstrap: [AppComponent]

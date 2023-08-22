@@ -8,6 +8,7 @@ import { NgFor, AsyncPipe } from '@angular/common';
 import { map, startWith } from 'rxjs/operators';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
+import { HttpService } from '../service/http.service';
 
 export class Annotation {
   labelId: number;
@@ -53,6 +54,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   @ViewChild('viewContainer') viewContainer: ElementRef;
   @ViewChild("pdfViewer", { static: true }) pdfViewerElement: ElementRef;
   annotationRefDict: { [key: number]: ComponentRef<DragResizeAnnoComponent>[] } = {};
+  textDetails: {[key: number]: any} = {}
   annos: any = [
     {nerId: 1, nerName: 'First Name', zIndex: 'auto'},
     {nerId: 2, nerName: 'Last Name', zIndex: 'auto'},
@@ -71,7 +73,10 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
   }
-  constructor(private viewContainerRef: ViewContainerRef, private randomColorService: RandomColorGeneratorService, private fb: FormBuilder) {
+  constructor(private viewContainerRef: ViewContainerRef, 
+    private randomColorService: RandomColorGeneratorService, 
+    private fb: FormBuilder,
+    private httpService: HttpService) {
 
   }
 
@@ -105,14 +110,19 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   uploadFileEvt(filesEvent: any) {
     if (filesEvent.target.files && filesEvent.target.files[0]) {
       let file: File = filesEvent.target.files[0];
-      this.fileAttr = '';
-      Array.from(filesEvent.target.files).forEach((file: any) => {
-        this.fileAttr += file.name + ' - ';
-      });
+      this.fileAttr = file.name;
+      this.httpService.postData(file).subscribe((response: any) => {
+        var data = response.data
+        var extractedPages = data.extractedPages;
+        for (let page = 0; page < extractedPages.length; page++) {
+          var pageDetails = extractedPages[page]
+          this.textDetails[page + 1] = pageDetails;
+          console.log(this.textDetails)
+        }
+      })
       file.arrayBuffer().then((data: ArrayBuffer) => {
         this.fileData = data;
       })
-
     } else {
       this.fileAttr = 'Choose File';
     }
@@ -121,19 +131,14 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   pageRendered(event: any) {
     // console.log("pageRendered", event.source.viewport)
     setTimeout(() => {
-      // console.log(event)
-      // console.log(this.pdfViewer)
       var pageView = event.source.viewport
       this.pdfViewerHeight = pageView?.height;
       this.pdfViewerWidth = pageView?.width;
-      // console.log(this.pdfViewerHeight, this.pdfViewerWidth)
-      // console.log(pageView)
       this.pdfContainer.nativeElement.style.width = Math.min(this.pdfViewerWidth, this.maxPdfViewerWidth) + 'px';
       this.pdfContainer.nativeElement.style.height = Math.min(this.pdfViewerHeight, this.maxPdfViewerHeight) + 'px';
       this.pdfViewerTop = this.pdfContainer.nativeElement.offsetTop;
       this.pdfViewerLeft = this.pdfContainer.nativeElement.offsetLeft;
       
-    
       console.log(this.pdfContainer.nativeElement.offsetLeft, this.pdfContainer.nativeElement.offsetTop)
       console.log(this.viewContainer.nativeElement.offsetLeft, this.viewContainer.nativeElement.offsetTop)
 
@@ -235,22 +240,57 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
 
   onMouseUp(event: any) {
     if (this.creatingAnno) {
+
+      var labelValue = '';
+      var annoRect = {
+      x: this.currentAnno.instance.left,
+      y: this.currentAnno.instance.top,
+      w: this.currentAnno.instance.width,
+      h: this.currentAnno.instance.height
+     }
       var anno : Annotation = {
         labelId: this.currentAnno.instance.labelId,
         label:  this.annos[this.currentNerId - 1].nerName,
         labelValue : "TBD",
-        boundingBoxes: {
-          x: this.currentAnno.instance.left,
-          y: this.currentAnno.instance.top,
-          w: this.currentAnno.instance.width,
-          h: this.currentAnno.instance.height
-        }
+        boundingBoxes: annoRect
       }
+      labelValue = this.getLabelValue(annoRect, labelValue);
+      anno.labelValue = labelValue;
       ELEMENT_DATA.push(anno)
       console.log(ELEMENT_DATA)
       this.dataSource = new MatTableDataSource<Annotation>(ELEMENT_DATA);
       this.closeAnnotation();
     }
+  }
+
+  private getLabelValue(annoRect: { x: number; y: number; w: number; h: number; }, labelValue: string) {
+    var pageDetails = this.textDetails[this.currentPage];
+    var pageHeight = pageDetails.pageHeight;
+    var pageWidth = pageDetails.pageWidth;
+    var hR = 1056 / pageHeight;
+    var wR = 816 / pageWidth;
+    var textDetails = pageDetails.textDetails;
+    for (let t = 0; t < textDetails.length; t++) {
+
+      var annoText = textDetails[t];
+
+      var coords = annoText.coordinates;
+      var rect = {
+        x: coords.x * wR,
+        y: coords.y * hR,
+        h: coords.height * hR,
+        w: coords.width * wR
+      };
+      console.log('annotext', annoText, "rect", rect, "annoRect", annoRect);
+      if (this.isSubRect(annoRect, rect)) {
+        if (labelValue != '') {
+          labelValue += ' ' + annoText.text;
+        } else {
+          labelValue = annoText.text;
+        }
+      }
+    }
+    return labelValue;
   }
 
   afterLoadComplete(event: any) {
@@ -303,12 +343,15 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       var annoFound = ELEMENT_DATA[i]
       console.log(annoFound)
       if (annoFound.labelId==labelId) {
-        annoFound.boundingBoxes = {
+        var rect = {
           x: anno.left,
           y: anno.top,
           w: anno.width,
           h: anno.height
         }
+        annoFound.boundingBoxes = rect;
+        var labelValue = this.getLabelValue(rect, '');
+        annoFound.labelValue = labelValue;
         this.dataSource = new MatTableDataSource<Annotation>(ELEMENT_DATA);
       }
     }
@@ -320,15 +363,15 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   
     // Calculate the coordinates of the edges of rect1
     const rect1Left = rect1.x;
-    const rect1Right = rect1.x + rect1.width;
+    const rect1Right = rect1.x + rect1.w;
     const rect1Top = rect1.y;
-    const rect1Bottom = rect1.y + rect1.height;
+    const rect1Bottom = rect1.y + rect1.h;
   
     // Calculate the coordinates of the edges of rect2
     const rect2Left = rect2.x;
-    const rect2Right = rect2.x + rect2.width;
+    const rect2Right = rect2.x + rect2.w;
     const rect2Top = rect2.y;
-    const rect2Bottom = rect2.y + rect2.height;
+    const rect2Bottom = rect2.y + rect2.h;
   
     // Check if rect2 is completely inside rect1
     return (
