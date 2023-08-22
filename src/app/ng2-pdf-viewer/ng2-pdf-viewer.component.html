@@ -1,0 +1,128 @@
+<div class="app-container">
+    <div class="annotation-container">
+        <div class="upload-container">
+            <mat-form-field class="upload-file-form-field">
+                <div>
+                    <mat-toolbar>
+                        <input matInput [(ngModel)]="fileAttr" readonly name="name"/>
+                        <button mat-flat-button color="primary">Browse File</button>
+                    </mat-toolbar>
+                    <input type="file" #fileInput id="uploadFile" (change)="uploadFileEvt($event)" name="uploadFile"
+                        accept="application/pdf" />
+                </div>
+            </mat-form-field>
+        </div>
+        <div class="ner-cotainer">
+            <mat-divider style="margin: 2px;"></mat-divider>
+            <div style="text-align: center;">
+                <h4>Select NER Labels</h4>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+                <div style="margin-bottom: 20px; margin-right: 10px;" *ngFor="let anno of annos">
+                    <button mat-raised-button [style.z-index]="anno.zIndex" (click)="onAnnotationSelect(anno)">{{anno.nerName}}</button>
+                </div>
+            </div>
+            <mat-divider style="margin: 2px;"></mat-divider>
+        </div>
+        <div class="data-points-container">
+            <div class="mat-elevation-z8">
+                <table mat-table [dataSource]="dataSource">
+
+                   
+                    <ng-container matColumnDef="labelId">
+                        <th mat-header-cell *matHeaderCellDef> LabelId </th>
+                        <td mat-cell *matCellDef="let element"> {{element.labelId}} </td>
+                    </ng-container>
+
+                  
+                    <ng-container matColumnDef="label">
+                        <th mat-header-cell *matHeaderCellDef> Label </th>
+                        <td mat-cell *matCellDef="let element"> {{element.label}} </td>
+                    </ng-container>
+
+                
+                    <ng-container matColumnDef="labelValue">
+                        <th mat-header-cell *matHeaderCellDef> LabelValue </th>
+                        <td mat-cell *matCellDef="let element"> {{element.labelValue}} </td>
+                    </ng-container>
+
+               
+                    <ng-container matColumnDef="boundingBoxes">
+                        <th mat-header-cell *matHeaderCellDef> BoundingBoxes </th>
+                        <td mat-cell *matCellDef="let e"> [x: {{e.boundingBoxes.x}}, y: {{e.boundingBoxes.y}}, w: {{e.boundingBoxes.w}}, h: {{e.boundingBoxes.h}}] </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="action">
+                        <th mat-header-cell *matHeaderCellDef> Action </th>
+                        <td mat-cell *matCellDef="let element"> 
+                            <button mat-icon-button matTooltip="Click to Delete" class="iconbutton"
+                            (click)="deleteAnno(element.labelId)">
+                            <mat-icon>delete_outline</mat-icon>
+                          </button>
+                        </td>
+                      </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                </table>
+
+                <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+                    aria-label="Select page of periodic elements">
+                </mat-paginator>
+            </div>
+
+        </div>
+    </div>
+    <div #viewContainer class="view-container">
+        <div class="pdf-pagination-container">
+            <div>
+                <button mat-icon-button [disabled]="currentPage==1" (click)="goToPreviousPage()">
+                    <mat-icon>keyboard_arrow_left</mat-icon>
+                </button>
+            </div>
+            <div style="padding: 10px;">
+                {{currentPage}}/{{totalPages}}
+            </div>
+            <div>
+                <button mat-icon-button [disabled]="currentPage==totalPages" (click)="goToNextPage()">
+                    <mat-icon>keyboard_arrow_right</mat-icon>
+                </button>
+            </div>
+        </div>
+        <div id="pdf-container-id" class="pdf-container" [style.z-index]="zIndex">
+            <div #pdfContainer class="pdf-container-main" (mousedown)="onMouseDown($event)"
+                (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp($event)"
+                style="position: relative; cursor: auto;" style="width: 816px; height: 1068px;">
+                <ng-template #template class="pdf-template"></ng-template>
+                <pdf-viewer id="pdfViewer" class="pdf-viewer" [src]="fileData" [rotation]="0" [(page)]="currentPage"
+                    [zoom]="1" [show-all]="false" [render-text]="false" [original-size]="false" [fit-to-page]="false"
+                    [show-borders]="false" style="width: 816px; height: 1068px;" (page-rendered)="pageRendered($event)"
+                    (after-load-complete)="afterLoadComplete($event)"></pdf-viewer>
+            </div>
+        </div>
+
+        <div class="pdf-pagination-container">
+            <div>
+                <button mat-icon-button [disabled]="currentPage==1" (click)="goToPreviousPage()">
+                    <mat-icon>keyboard_arrow_left</mat-icon>
+                </button>
+            </div>
+            <div style="padding: 10px;">
+                {{currentPage}}/{{totalPages}}
+            </div>
+            <div>
+                <button mat-icon-button [disabled]="currentPage==totalPages" (click)="goToNextPage()">
+                    <mat-icon>keyboard_arrow_right</mat-icon>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+<div *ngIf="annoStarted" class="overlay-container">
+    <div class="overlay-close-div" (click)="onAnnoClose()">
+        <mat-icon class="mat-icon-close">close</mat-icon>
+    </div>
+
+</div>
