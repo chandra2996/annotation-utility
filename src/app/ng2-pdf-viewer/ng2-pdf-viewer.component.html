@@ -24,7 +24,11 @@
             </div>
             <mat-divider style="margin: 2px;"></mat-divider>
         </div>
+        
         <div class="data-points-container">
+            <div >
+                <button mat-raised-button color="primary" (click)="exportAnnotations()">Export Annotations</button>
+            </div>
             <div class="mat-elevation-z8">
                 <table mat-table [dataSource]="dataSource">
 

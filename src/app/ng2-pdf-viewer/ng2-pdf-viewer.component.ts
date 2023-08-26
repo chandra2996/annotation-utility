@@ -17,6 +17,7 @@ export interface Annotation {
   text: string;
   box: Number[];
   linking: number;
+  words: {};
 }
 
 const ELEMENT_DATA: Annotation[] = [];
@@ -247,7 +248,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
               label: annotation.label,
               text: annotation.text,
               box: annotation.box,
-              linking: annotation.linkedTo
+              linking: annotation.linkedTo,
+              words: annotation.words
             }
             ELEMENT_DATA[i] = anno2;
           } else if (anno.id == this.currentLinkAnno.id) {
@@ -256,7 +258,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
               label: this.currentLinkAnno.label,
               text: this.currentLinkAnno.text,
               box: this.currentLinkAnno.box,
-              linking: this.currentLinkAnno.linkedTo
+              linking: this.currentLinkAnno.linkedTo,
+              words: this.currentLinkAnno.words
             }
             ELEMENT_DATA[i] = anno2;
           }
@@ -321,6 +324,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
         text: this.currentAnnotation.instance.text,
         box: this.currentAnnotation.instance.box,
         linking: this.currentAnnotation.instance.linkedTo,
+        words: this.currentAnnotation.instance.words
       }
       ELEMENT_DATA.push(annotation);
       this.dataSource.data = ELEMENT_DATA;
@@ -449,6 +453,43 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       rect2Top >= rect1Top &&
       rect2Bottom <= rect1Bottom
     );
+  }
+
+  exportAnnotations() {
+
+    var jsonObjList = [];
+    for(let i = 0; i<ELEMENT_DATA.length; i++) {
+      var anno = ELEMENT_DATA[i];
+      var jsonObj = {
+        box: anno.box,
+        text: anno.text,
+        label: anno.label,
+        words: anno.words,
+        linking: [anno.id, anno.linking],
+        id: anno.id
+      }
+      jsonObjList.push(jsonObj);
+    }
+    console.log(jsonObjList)
+    var exportData = {
+      form: jsonObjList
+    }
+    console.log(exportData)
+    // Create a Blob object to represent the JSON data
+    const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
+
+    // Create a download link for the Blob
+    const url = window.URL.createObjectURL(blob);
+
+    // Create a link element and trigger the download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
   }
 
 }
