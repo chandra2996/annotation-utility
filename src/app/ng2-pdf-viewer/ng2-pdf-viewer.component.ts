@@ -45,7 +45,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   totalPages: number = 1;
   scale = 1;
   currentAnnotation: ComponentRef<DragResizeAnnoComponent>;
-  zIndex: string | number = 'auto';
+  pdfContainer1ZIndex: string | number = 'auto';
   annoStarted = false;
   annotationReady = false;
   currentLabelId: number;
@@ -107,7 +107,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       console.log('annotation selected');
       this.annoStarted = true;
       this.labels[anno.labelId - 1].zIndex = 2
-      this.zIndex = 2;
+      this.pdfContainer1ZIndex = 2;
       this.currentLabelId = anno.labelId;
     }
   }
@@ -192,7 +192,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       annotation.instance.pageTop = this.pdfViewerTop;
       annotation.instance.pageWidth = this.pdfViewerWidth;
       annotation.instance.pageHeight = this.pdfViewerHeight;
-      annotation.instance.color = this.randomColorService.getRandomColor();
+     
       this.currentAnnotation = annotation;
       if (this.annotationRefDict.hasOwnProperty(this.currentPage)) {
         var annList = this.annotationRefDict[this.currentPage];
@@ -232,6 +232,11 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
         this.currentLinkAnno.linkedTo = annotation.id;
         this.currentLinkAnno.isLinked = true;
         this.linkageStarted = false;
+        var color = this.randomColorService.getRandomColor();
+        this.currentLinkAnno.color = color;
+        annotation.color = color;
+        annotation.ngOnChanges();
+        this.currentLinkAnno.ngOnChanges();
         console.log("linked", annotation);
         for (let i = 0; i < ELEMENT_DATA.length; i++) {
           var anno = ELEMENT_DATA[i];
@@ -395,7 +400,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   closeAnnotation() {
     this.creatingAnnotation = false;
     this.annoStarted = false;
-    this.zIndex = 'auto';
+    this.pdfContainer1ZIndex = 'auto';
     this.labels[this.currentLabelId - 1].zIndex = 'auto'
   }
 

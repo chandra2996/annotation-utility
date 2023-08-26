@@ -2,22 +2,24 @@
 
 .resizable-container {
     position: absolute;
-    z-index: 999;
+    pointer-events: none;
     /* background-color: #ff945b15; */
     /* border: 1px solid red; */
+    
 }
 
 .resizable-draggable {
-    border: 1px solid red;
+    /* border: 1px solid red; */
+    pointer-events:all;
 }
 
 .resizable {
     position: absolute;
     height: 12px;
     width: 12px;
-    right: 15px;
-    bottom: 15px;
-    border: 1px solid red;
+    right: 9px;
+    bottom: 9px;
+    /* border: 1px solid red; */
 }
 
 .draggable {
@@ -25,8 +27,8 @@
     height: 12px;
     width: 12px;
     top: 18px;
-    left: 49%;
-    border: 1px solid red;
+    left: 48%;
+    /* border: 1px solid red; */
 }
 
 .draggable:hover {
@@ -40,15 +42,15 @@
 .labelId {
     position: absolute;
     color: aliceblue;
-    background-color: darkslateblue;
     text-align: center;
     height: 18px;
     width: 18px;
-    top: 10px;
-    left: 10px;
+    top: 9px;
+    left: 9px;
     border-radius: 50%;
     font-size: x-small;
     cursor: pointer;
+    pointer-events: none;
 }
 .resizable-draggable:hover > .labelId {
     display: none;
@@ -58,9 +60,9 @@
     position: absolute;
     height: 18px;
     width: 18px;
-    top: 15px;
-    right: 15px;
-    border: 1px solid red;
+    top: 9px;
+    right: 9px;
+    /* border: 1px solid red; */
 }
 
 .my-delete-icon {

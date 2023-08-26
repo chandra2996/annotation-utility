@@ -27,13 +27,14 @@ export class DragResizeAnnoComponent implements OnInit, AfterViewInit, OnChanges
   @Input('width') width: number;
   @Input('height') height: number;
 
-  @Input('color') color: string;
+  color: string;
   backgroundColor: string;
   idBackgroundColor: string;
   @Input('pageTop') pageTop: number;
   @Input('pageLeft') pageLeft: number;
   @Input('pageHeight') pageHeight: number;
   @Input('pageWidth') pageWidth: number;
+  zIndex: number = 3;
 
   @Output() resizableDragableDeleted = new EventEmitter<number>();
   @Output() resizableDragableResizedOrDragged = new EventEmitter<this>();
@@ -48,14 +49,17 @@ export class DragResizeAnnoComponent implements OnInit, AfterViewInit, OnChanges
   private resizeStartX = 0;
   private resizeStartY = 0;
   rdId: string;
+  rdcId: string;
   showControls = false;
 
   ngOnInit() {
     //update bbox if annotation changes
     this.updateBox();
+    this.color = '0, 21, 141 ';
     this.backgroundColor = 'rgba(' + this.color + ', 0.3)';
     this.idBackgroundColor = 'rgb(' + this.color + ')';
     this.rdId = 'rd' + this.id;
+    this.rdcId = 'rdc' + this.id;
 
   }
 
@@ -157,13 +161,27 @@ export class DragResizeAnnoComponent implements OnInit, AfterViewInit, OnChanges
         this.linkAnnotation.emit(this);
       }
     }
+  }
 
+  onMouseEnter(rdId: string) {
+    const doc = document.getElementById(rdId);
+    if (doc) {
+      doc.style.zIndex = '999'
+    }
+  }
+
+  onMouseLeave(rdId: string) {
+    const doc = document.getElementById(rdId);
+    if (doc) {
+      doc.style.zIndex = `${this.zIndex}`
+    }
   }
 
   onBlur(event: any, rdId: string) {
     const doc = document.getElementById(rdId);
     if (doc) {
       this.showControls = false;
+      doc.style.zIndex = `${this.zIndex}`
     }
   }
 
@@ -171,8 +189,10 @@ export class DragResizeAnnoComponent implements OnInit, AfterViewInit, OnChanges
   showControlsStyle() {
     const doc = document.getElementById(this.rdId);
     if (doc) {
-      doc.focus();
       this.showControls = true;
+      doc.focus();
+      console.log(this.rdId, doc);
     }
+    
   }
 }

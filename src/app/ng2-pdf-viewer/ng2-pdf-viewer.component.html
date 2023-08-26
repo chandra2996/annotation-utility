@@ -94,7 +94,7 @@
                 </button>
             </div>
         </div>
-        <div id="pdfContainer1" class="pdf-container1" [style.z-index]="zIndex">
+        <div id="pdfContainer1" class="pdf-container1" [style.z-index]="pdfContainer1ZIndex">
             <div #pdfContainer2 id="pdfContainer2" class="pdf-container2" (mousedown)="onMouseDown($event)"
                 (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp($event)">
                 <ng-template #template class="pdf-template"></ng-template>

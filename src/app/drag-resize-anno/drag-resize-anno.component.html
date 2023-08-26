@@ -1,10 +1,13 @@
-<div class="resizable-container" [style.width.px]="width + 2*resizableMargin" [style.height.px]="height + 2*resizableMargin" [style.top.px]="top - resizableMargin"
-[style.left.px]="left - resizableMargin">
+<div [id]="rdcId" class="resizable-container" [style.width.px]="width + 2*resizableMargin" [style.height.px]="height + 2*resizableMargin" [style.top.px]="top - resizableMargin"
+[style.left.px]="left - resizableMargin" [style.z-index]="zIndex">
     <div [id]="rdId" tabindex="0" class="resizable-draggable" [style.width.px]="width" [style.height.px]="height" [style.top.px]="top"
-        [style.left.px]="left" [style.margin.px]="resizableMargin" [style.background-color]="backgroundColor" (click)="onClick($event, rdId)" (blur)="onBlur($event, rdId)">
-        <div class="labelId" [style.background-color]="idBackgroundColor">{{id}}</div>
-        <div *ngIf="showControls" #deleteDiv class="delete-resizable-draggable" (mousedown)="deleteResizableDraggable($event)"><i class="fa-sharp fa-solid fa-circle-minus fa-lg my-delete-icon"  ></i></div>
-        <div *ngIf="showControls" class="draggable" (mousedown)="startDrag($event)"></div>
-        <div *ngIf="showControls" class="resizable" (mousedown)="startResize($event)"></div>
+        [style.left.px]="left" [style.margin.px]="resizableMargin" [style.background-color]="backgroundColor" 
+        [style.z-index]="zIndex"
+        (click)="onClick($event, rdId)" (blur)="onBlur($event, rdId)" 
+        (mouseenter)="onMouseEnter(rdId)" (mouseleave)="onMouseLeave(rdId)">
+        <div [style.z-index]="zIndex" class="labelId" [style.background-color]="idBackgroundColor">{{id}}</div>
+        <div [style.z-index]="zIndex" *ngIf="showControls" #deleteDiv class="delete-resizable-draggable" (mousedown)="deleteResizableDraggable($event)"><i class="fa-sharp fa-solid fa-circle-minus fa-lg my-delete-icon"  ></i></div>
+        <div [style.z-index]="zIndex" *ngIf="showControls" class="draggable" (mousedown)="startDrag($event)"></div>
+        <div [style.z-index]="zIndex" *ngIf="showControls" class="resizable" (mousedown)="startResize($event)"></div>
     </div>
 </div>
