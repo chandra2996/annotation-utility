@@ -22,6 +22,7 @@
     "@angular/router": "^16.1.0",
     "@fortawesome/fontawesome-free": "^6.4.2",
     "ng2-pdf-viewer": "^9.1.5",
+    "ngx-spinner": "^16.0.2",
     "pdfjs-dist": "^3.9.179",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

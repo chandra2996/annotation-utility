@@ -1,9 +1,10 @@
 <div class="resizable-container" [style.width.px]="width + 2*resizableMargin" [style.height.px]="height + 2*resizableMargin" [style.top.px]="top - resizableMargin"
 [style.left.px]="left - resizableMargin">
-    <div class="labelId" [style.background-color]="color">{{labelId}}</div>
-    <div #deleteDiv class="delete-resizable-draggable" (mousedown)="deleteResizableDraggable($event)"><i class="fa-sharp fa-solid fa-circle-minus fa-lg my-delete-icon"  ></i></div>
-    <div class="resizable-draggable" [style.width.px]="width" [style.height.px]="height" [style.top.px]="top"
-        [style.left.px]="left" [style.margin.px]="resizableMargin" (mousedown)="startDrag($event)">
+    <div [id]="rdId" tabindex="0" class="resizable-draggable" [style.width.px]="width" [style.height.px]="height" [style.top.px]="top"
+        [style.left.px]="left" [style.margin.px]="resizableMargin" [style.background-color]="backgroundColor" (click)="onClick($event, rdId)" (blur)="onBlur($event, rdId)">
+        <div class="labelId" [style.background-color]="idBackgroundColor">{{id}}</div>
+        <div *ngIf="showControls" #deleteDiv class="delete-resizable-draggable" (mousedown)="deleteResizableDraggable($event)"><i class="fa-sharp fa-solid fa-circle-minus fa-lg my-delete-icon"  ></i></div>
+        <div *ngIf="showControls" class="draggable" (mousedown)="startDrag($event)"></div>
+        <div *ngIf="showControls" class="resizable" (mousedown)="startResize($event)"></div>
     </div>
-    <div class="resizable" (mousedown)="startResize($event)"></div>
 </div>

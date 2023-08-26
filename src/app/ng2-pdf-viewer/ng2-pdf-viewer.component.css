@@ -1,6 +1,6 @@
 .app-container {
     width: 1450px;
-    height: 1164px;
+    height: 762px;
     margin: 10px;
     display: flex;
     justify-content: center;
@@ -11,7 +11,7 @@
 .annotation-container {
     width: 560px;
     /* border: 1px solid red; */
-    overflow: auto; 
+    overflow: scroll; 
 }
 
 .view-container {
@@ -36,7 +36,7 @@
 }
 
 .pdf-pagination-container {
-    width: 816px;
+    width: 832px;
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -44,15 +44,24 @@
     flex-direction: row;
 }
 
-.pdf-container {
+.pdf-container1 {
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
-    /* overflow-y: scroll; */
+    overflow-y: scroll;
 }
-.pdf-container-main {
+.pdf-container2 {
     /* border: 1px solid red; */
     position: relative;
+    overflow: unset;
+    width: 816px; 
+    height: 1056px; 
     /* top: 0;
     left : 0; */
+}
+.pdf-viewer {
+    width: 816px; 
+    height: 1056px; 
+    overflow: unset; 
+    display: block;
 }
 .mat-mdc-form-field {
     margin: 40px 0;

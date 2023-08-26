@@ -20,7 +20,7 @@ export class HttpService {
     // Define headers (optional)
     const headers = new HttpHeaders();
     headers.append('Access-Control-Allow-Origin',  '*');
-    const url = 'http://localhost:8088/extractionservice/api/v1/extractFile'; // Replace with your API endpoint
+    const url = 'http://localhost:8080/extractFile'; // Replace with your API endpoint
     return this.http.post(url, formData, { headers });
   }
 }

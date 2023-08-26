@@ -1,27 +1,45 @@
-import { Component, Input, HostListener, Output, EventEmitter, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, HostListener, Output, EventEmitter, AfterViewInit, ViewChild, ElementRef, OnChanges, OnInit } from '@angular/core';
 
+
+export interface Word {
+  box: Number[],
+  text: string
+}
 @Component({
   selector: 'app-drag-resize-anno',
   templateUrl: './drag-resize-anno.component.html',
   styleUrls: ['./drag-resize-anno.component.css']
 })
-export class DragResizeAnnoComponent implements AfterViewInit {
+export class DragResizeAnnoComponent implements OnInit, AfterViewInit, OnChanges {
 
+  //annotation detils
+  @Input('id') public id: number;
+  @Input('label') public label: string;
+  public text: string;
+  public box: Number[] = [];
+  @Input('words') public words: Word[];
+  public linkedTo: number;
+  public isLinked = false;
 
-  @Input('labelId') public labelId: number;
-  @Input('width') public width: number;
-  @Input('height') public height: number;
-  @Input('left') public left: number;
-  @Input('top') public top: number;
-  @Input('color') public color: string;
-  @Input('pageTop') public pageTop: number;
-  @Input('pageLeft') public pageLeft: number;
-  @Input('pageHeight') public pageHeight: number;
-  @Input('pageWidth') public pageWidth: number;
+  //bounding boxes
+  @Input('top') top: number;
+  @Input('left') left: number;
+  @Input('width') width: number;
+  @Input('height') height: number;
+
+  @Input('color') color: string;
+  backgroundColor: string;
+  idBackgroundColor: string;
+  @Input('pageTop') pageTop: number;
+  @Input('pageLeft') pageLeft: number;
+  @Input('pageHeight') pageHeight: number;
+  @Input('pageWidth') pageWidth: number;
 
   @Output() resizableDragableDeleted = new EventEmitter<number>();
   @Output() resizableDragableResizedOrDragged = new EventEmitter<this>();
-  // @ViewChild("deleteDiv") deleteDiv: ElementRef
+  @Output() linkAnnotation = new EventEmitter<this>();
+
+
   private isDragging = false;
   private dragStartX = 0;
   private dragStartY = 0;
@@ -29,10 +47,49 @@ export class DragResizeAnnoComponent implements AfterViewInit {
   private isResizing = false;
   private resizeStartX = 0;
   private resizeStartY = 0;
+  rdId: string;
+  showControls = false;
 
-  ngAfterViewInit(): void {
+  ngOnInit() {
+    //update bbox if annotation changes
+    this.updateBox();
+    this.backgroundColor = 'rgba(' + this.color + ', 0.3)';
+    this.idBackgroundColor = 'rgb(' + this.color + ')';
+    this.rdId = 'rd' + this.id;
+
   }
 
+  ngAfterViewInit(): void {
+
+  }
+
+  ngOnChanges(): void {
+    console.log("DragResizeAnnoComponent -> ngOnChanges")
+    this.updateBox();
+    this.updateText();
+    this.backgroundColor = 'rgba(' + this.color + ', 0.3)';
+    this.idBackgroundColor = 'rgb(' + this.color + ')';
+  }
+
+  updateBox() {
+    this.box[0] = (this.left);
+    this.box[1] = (this.top);
+    this.box[2] = (this.left + this.width);
+    this.box[3] = (this.top + this.height);
+  }
+  updateText() {
+    var text = '';
+    for (let i = 0; i < this.words.length; i++) {
+      var word = this.words[i];
+      if (text == '') {
+        text = word.text;
+      } else {
+        text += ' ' + word.text;
+      }
+    }
+    this.text = text;
+    console.log(this.text);
+  }
   startDrag(event: MouseEvent) {
     this.isDragging = true;
     this.dragStartX = event.clientX - this.left;
@@ -50,16 +107,16 @@ export class DragResizeAnnoComponent implements AfterViewInit {
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
     if (this.isDragging) {
-      // console.log("page", this.pageLeft, this.pageTop, this.pageHeight, this.pageWidth)
-      // console.log("comp", this.left, this.top, this.height, this.width)
       var left = event.clientX - this.dragStartX;
-      if(left >= 0 && (left + this.width) <= (this.pageWidth)) {
+      if (left >= 0 && (left + this.width) <= (this.pageWidth)) {
         this.left = left;
+        this.showControlsStyle();
         this.resizableDragableResizedOrDragged.emit(this);
       }
       var top = event.clientY - this.dragStartY;
-      if(top >= 0 && (top + this.height) <= (this.pageHeight)) {
+      if (top >= 0 && (top + this.height) <= (this.pageHeight)) {
         this.top = top;
+        this.showControlsStyle();
         this.resizableDragableResizedOrDragged.emit(this);
       }
     }
@@ -67,11 +124,13 @@ export class DragResizeAnnoComponent implements AfterViewInit {
       var width = event.clientX - this.resizeStartX;
       if ((this.left + width) <= this.pageWidth) {
         this.width = width;
+        this.showControlsStyle();
         this.resizableDragableResizedOrDragged.emit(this);
       }
       var height = event.clientY - this.resizeStartY;
       if ((this.top + height) <= this.pageHeight) {
         this.height = height;
+        this.showControlsStyle();
         this.resizableDragableResizedOrDragged.emit(this);
       }
     }
@@ -85,12 +144,35 @@ export class DragResizeAnnoComponent implements AfterViewInit {
 
 
   deleteResizableDraggable(event: any) {
-    console.log("deleted", this.labelId)
-    this.resizableDragableDeleted.emit(this.labelId)
+    this.resizableDragableDeleted.emit(this.id)
     event.stopPropagation();
   }
 
+  onClick(event: MouseEvent, rdId: string) {
+    const doc = document.getElementById(rdId);
+    if (doc) {
+      doc.focus();
+      this.showControls = true;
+      if (event.ctrlKey) {
+        this.linkAnnotation.emit(this);
+      }
+    }
+
+  }
+
+  onBlur(event: any, rdId: string) {
+    const doc = document.getElementById(rdId);
+    if (doc) {
+      this.showControls = false;
+    }
+  }
 
 
-
+  showControlsStyle() {
+    const doc = document.getElementById(this.rdId);
+    if (doc) {
+      doc.focus();
+      this.showControls = true;
+    }
+  }
 }
