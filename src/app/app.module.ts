@@ -14,12 +14,14 @@ import { DragResizeAnnoComponent } from './drag-resize-anno/drag-resize-anno.com
 import { ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { NgxSpinnerModule } from 'ngx-spinner';
+import { BboxComponent } from './bbox/bbox.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     Ng2PdfViewerComponent,
-    DragResizeAnnoComponent
+    DragResizeAnnoComponent,
+    BboxComponent
   ],
   imports: [
     BrowserModule,

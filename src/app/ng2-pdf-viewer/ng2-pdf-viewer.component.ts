@@ -1,5 +1,6 @@
-import { Component, ViewChild, ViewContainerRef, ElementRef, AfterViewInit, HostListener, ComponentRef, TemplateRef } from '@angular/core';
+import { Component, ViewChild, ViewContainerRef, Renderer2, ElementRef, AfterViewInit, HostListener, ComponentRef, TemplateRef } from '@angular/core';
 import { DragResizeAnnoComponent, Word } from '../drag-resize-anno/drag-resize-anno.component';
+import { BboxComponent } from '../bbox/bbox.component';
 import { PdfViewerComponent } from 'ng2-pdf-viewer';
 import { RandomColorGeneratorService } from '../service/random-color-generator.service';
 import { FormGroup, Validators, FormBuilder, FormControl } from '@angular/forms';
@@ -52,6 +53,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   currentLabelId: number;
   scrollWidth = 10;
   @ViewChild('template', { read: ViewContainerRef }) template: ViewContainerRef;
+  @ViewChild('bboxTemplate', { read: ViewContainerRef }) bboxTemplate: ViewContainerRef;
   @ViewChild(PdfViewerComponent) pdfViewer: PdfViewerComponent;
   @ViewChild("pdfContainer2", { static: true }) pdfContainer2: ElementRef;
   @ViewChild('viewContainer') viewContainer: ElementRef;
@@ -69,6 +71,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   dataSource = new MatTableDataSource<Annotation>(ELEMENT_DATA);
   currentLinkAnno: DragResizeAnnoComponent;
   linkageStarted = false;
+  bboxReady = false;
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
@@ -79,7 +82,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     private randomColorService: RandomColorGeneratorService,
     private fb: FormBuilder,
     private httpService: HttpService,
-    private spinner: NgxSpinnerService) {
+    private spinner: NgxSpinnerService,
+    private renderer: Renderer2) {
 
   }
 
@@ -114,6 +118,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   }
 
   uploadFileEvt(filesEvent: any) {
+    this.bboxReady = false;
     if (filesEvent.target.files && filesEvent.target.files[0]) {
       let file: File = filesEvent.target.files[0];
       this.fileAttr = file.name;
@@ -127,6 +132,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
           console.log(this.textDetails)
         }
         this.spinner.hide();
+        this.bboxReady = true;
       })
       file.arrayBuffer().then((data: ArrayBuffer) => {
         this.fileData = data;
@@ -143,15 +149,47 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       this.pdfViewerWidth = pageView?.width;
       var pdfViewer = document.getElementById('pdfViewer');
       if (pdfViewer) {
-        pdfViewer.style.width = this.pdfViewerWidth + this.scrollWidth + 'px';
-        pdfViewer.style.height = this.pdfViewerHeight + this.scrollWidth + 'px';
+        pdfViewer.style.width = this.pdfViewerWidth + this.scrollWidth  + 'px';
+        pdfViewer.style.height = this.pdfViewerHeight  + this.scrollWidth + 'px';
       }
+      this.pdfContainer2.nativeElement.style.width = this.pdfViewerWidth  + 'px';
+      this.pdfContainer2.nativeElement.style.height = this.pdfViewerHeight + 'px';
       this.pdfViewerTop = this.pdfContainer2.nativeElement.offsetTop;
       this.pdfViewerLeft = this.pdfContainer2.nativeElement.offsetLeft;
       this.scale = Math.min(this.pdfViewerWidth, this.maxPdfViewerWidth) / this.pdfViewerWidth;
       this.annotationReady = true;
+      // this.showBboxes(this.textDetails)
       this.loadAnnotations()
     }, 300);
+  }
+
+  showBboxes() {
+    var pageDetails = this.textDetails[this.currentPage];
+    var pageHeight = pageDetails.pageHeight;
+    var pageWidth = pageDetails.pageWidth;
+    var yRatio = this.pdfViewerHeight / pageHeight;
+    var xRatio = this.pdfViewerWidth / pageWidth;
+    var textDetails = pageDetails.textDetails;
+    for (let t = 0; t < textDetails.length; t++) {
+      var pdfWord = textDetails[t];
+      var coords = pdfWord.coordinates;
+      var wordRect = {
+        x: coords.x * xRatio,
+        y: coords.y * yRatio,
+        h: coords.height * yRatio,
+        w: coords.width * xRatio
+      };
+      var bbox = this.bboxTemplate.createComponent(BboxComponent);
+      bbox.instance.x = wordRect.x;
+      bbox.instance.y = wordRect.y;
+      bbox.instance.w = wordRect.w;
+      bbox.instance.h = wordRect.h;
+
+    }
+  }
+
+  hideBboxes() {
+    this.bboxTemplate.clear();
   }
 
   loadAnnotations() {
@@ -193,7 +231,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       annotation.instance.pageTop = this.pdfViewerTop;
       annotation.instance.pageWidth = this.pdfViewerWidth;
       annotation.instance.pageHeight = this.pdfViewerHeight;
-     
+
       this.currentAnnotation = annotation;
       if (this.annotationRefDict.hasOwnProperty(this.currentPage)) {
         var annList = this.annotationRefDict[this.currentPage];
@@ -353,10 +391,10 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
         var word: Word = {
           text: pdfWord.text,
           box: [
-            coords.x * xRatio,
-            coords.y * yRatio,
-            coords.height * yRatio,
-            coords.width * xRatio
+            wordRect.x,
+            wordRect.y,
+            wordRect.x + wordRect.w,
+            wordRect.y + wordRect.h
           ]
         }
         words.push(word);
@@ -458,7 +496,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   exportAnnotations() {
 
     var jsonObjList = [];
-    for(let i = 0; i<ELEMENT_DATA.length; i++) {
+    for (let i = 0; i < ELEMENT_DATA.length; i++) {
       var anno = ELEMENT_DATA[i];
       var jsonObj = {
         box: anno.box,

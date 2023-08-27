@@ -45,6 +45,7 @@
 }
 
 .pdf-container1 {
+    /* border: 1px solid red; */
     box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
     overflow-y: scroll;
 }
@@ -54,6 +55,8 @@
     overflow: unset;
     width: 816px; 
     height: 1056px; 
+    display: flex;
+    justify-content: left top;
     /* top: 0;
     left : 0; */
 }
@@ -61,7 +64,8 @@
     width: 816px; 
     height: 1056px; 
     overflow: unset; 
-    display: block;
+    /* display: block; */
+    /* border: 1px solid red; */
 }
 .mat-mdc-form-field {
     margin: 40px 0;
