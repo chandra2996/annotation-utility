@@ -16,6 +16,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { BboxComponent } from './bbox/bbox.component';
 
+
 @NgModule({
   declarations: [
     AppComponent,

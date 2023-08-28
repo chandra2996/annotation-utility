@@ -14,7 +14,7 @@ export class BboxComponent implements OnInit {
 
 
   ngOnInit(): void {
-    console.log(this)
+    // console.log(this)
   }
 
 

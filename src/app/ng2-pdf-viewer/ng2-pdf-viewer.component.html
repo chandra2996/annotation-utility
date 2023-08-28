@@ -2,6 +2,7 @@
     <div class="annotation-container">
         <div class="upload-container">
             <mat-form-field class="upload-file-form-field">
+                <h3>Upload pdf</h3>
                 <div>
                     <mat-toolbar>
                         <input matInput [(ngModel)]="fileAttr" readonly name="name" />
@@ -9,6 +10,17 @@
                     </mat-toolbar>
                     <input type="file" #fileInput id="uploadFile" (change)="uploadFileEvt($event)" name="uploadFile"
                         accept="application/pdf" />
+                </div>
+            </mat-form-field>
+            <mat-form-field class="upload-file-form-field">
+                <h3>Upload Json</h3>
+                <div>
+                    <mat-toolbar>
+                        <input matInput [(ngModel)]="jsonFileAttr" readonly name="name" />
+                        <button mat-flat-button color="primary">Browse File</button>
+                    </mat-toolbar>
+                    <input type="file" #jsonFileInput id="jsonUploadFile" (change)="uploadJsonFileEvt($event)"
+                        name="uploadJsonFile" accept="application/json" />
                 </div>
             </mat-form-field>
         </div>
@@ -28,10 +40,13 @@
 
         <div class="data-points-container">
             <div>
-                <button style="margin: 1px;" [disabled]="!bboxReady" mat-raised-button
-                    (click)="showBboxes()">Show Bbox</button>
-                <button style="margin: 1px;" [disabled]="!bboxReady"mat-raised-button 
-                    (click)="hideBboxes()">Hide BBox</button>
+                <button style="margin: 1px;" *ngIf="!bboxShown" [disabled]="!bboxReady&&!bboxShown" mat-raised-button
+                    (click)="showBboxes()">Show
+                    Bbox</button>
+                <button style="margin: 1px;" *ngIf="bboxShown" mat-raised-button (click)="hideBboxes()">Hide
+                    BBox</button>
+                <button style="margin: 1px;" [disabled]="file==null" mat-raised-button color="primary"
+                    (click)="downloadImage()">Download Image</button>
                 <button style="margin: 1px;" [disabled]="dataSource.data.length==0" mat-raised-button color="primary"
                     (click)="exportAnnotations()">Export Annotations</button>
             </div>
@@ -107,13 +122,17 @@
                 (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp($event)">
                 <ng-template #bboxTemplate class="pdf-template"></ng-template>
                 <ng-template #template class="pdf-template"></ng-template>
-                <pdf-viewer id="pdfViewer" class="pdf-viewer" [src]="fileData" [rotation]="0" [(page)]="currentPage"
-                    [zoom]="1" [show-all]="false" [render-text]="false" [original-size]="false" [autoresize]="false"
-                    [show-borders]="false" (page-rendered)="pageRendered($event)"
-                    (after-load-complete)="afterLoadComplete($event)"></pdf-viewer>
+                <pdf-viewer id="pdfViewer" class="pdf-viewer" [src]="fileData" [(page)]="currentPage"
+                    [rotation]="rotation" [original-size]="originalSize" [show-all]="showAll" [fit-to-page]="fitToPage"
+                    (after-load-complete)="afterLoadComplete($event)" [zoom]="zoom" [zoom-scale]="zoomScale"
+                    [stick-to-page]="stickToPage" [render-text]="renderText" [external-link-target]="'blank'"
+                    [autoresize]="autoresize" (page-rendered)="pageRendered($event)"
+                    (after-load-complete)="afterLoadComplete($event)" [show-borders]="false"></pdf-viewer>
             </div>
         </div>
+        <div></div>
     </div>
+    
 
 </div>
 <div *ngIf="annoStarted" class="overlay-container">

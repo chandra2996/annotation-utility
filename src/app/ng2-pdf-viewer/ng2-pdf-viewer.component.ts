@@ -1,7 +1,9 @@
-import { Component, ViewChild, ViewContainerRef, Renderer2, ElementRef, AfterViewInit, HostListener, ComponentRef, TemplateRef } from '@angular/core';
+import { Component, ViewChild, ViewContainerRef, ComponentFactory, Renderer2, ElementRef, ComponentFactoryResolver, AfterViewInit, HostListener, ComponentRef, TemplateRef } from '@angular/core';
 import { DragResizeAnnoComponent, Word } from '../drag-resize-anno/drag-resize-anno.component';
 import { BboxComponent } from '../bbox/bbox.component';
-import { PdfViewerComponent } from 'ng2-pdf-viewer';
+import { PdfViewerComponent, PDFProgressData } from 'ng2-pdf-viewer';
+import * as PDFJS from 'pdfjs-dist';
+import * as PDFJSViewer from 'pdfjs-dist/web/pdf_viewer';
 import { RandomColorGeneratorService } from '../service/random-color-generator.service';
 import { FormGroup, Validators, FormBuilder, FormControl } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -11,6 +13,13 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { HttpService } from '../service/http.service';
 import { NgxSpinnerService } from 'ngx-spinner';
+import type {
+  PDFSource,
+  PDFPageProxy,
+  PDFDocumentProxy,
+  PDFDocumentLoadingTask,
+  ZoomScale
+} from './typings';
 
 export interface Annotation {
   id: number;
@@ -21,7 +30,7 @@ export interface Annotation {
   words: {};
 }
 
-const ELEMENT_DATA: Annotation[] = [];
+var ELEMENT_DATA: Annotation[] = [];
 
 @Component({
   selector: 'app-ng2-pdf-viewer',
@@ -30,8 +39,11 @@ const ELEMENT_DATA: Annotation[] = [];
 })
 export class Ng2PdfViewerComponent implements AfterViewInit {
 
+  file: File;
   fileAttr: any;
   fileData: any;
+  jsonFileAttr: any;
+  jsonFileData: any;
   currentElement: any;
   pdfViewerWidth: number;
   pdfViewerHeight: number;
@@ -72,6 +84,25 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   currentLinkAnno: DragResizeAnnoComponent;
   linkageStarted = false;
   bboxReady = false;
+  bboxShown = false;
+
+  error: any;
+  rotation = 0;
+  zoom = 1.0;
+  zoomScale: ZoomScale = 'page-width';
+  originalSize = false;
+  pdf: any;
+  renderText = false;
+  progressData!: PDFProgressData;
+  isLoaded = false;
+  stickToPage = false;
+  showAll = false;
+  autoresize = false;
+  fitToPage = false;
+  outline!: any[];
+  isOutlineShown = false;
+  pdfQuery = '';
+  mobile = false;
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
@@ -83,15 +114,25 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     private fb: FormBuilder,
     private httpService: HttpService,
     private spinner: NgxSpinnerService,
-    private renderer: Renderer2) {
+    private renderer: Renderer2,
+    private resolver: ComponentFactoryResolver) {
 
   }
 
   ngOnInit() {
-    this.spinner.show();
+
+    
     setTimeout(() => {
+      const bboxTemplateElement = this.bboxTemplate.element.nativeElement;
+      const templateElement = this.template.element.nativeElement;
+      const divElement = document.getElementsByClassName('ng2-pdf-viewer-container')[0];
+      divElement.appendChild(bboxTemplateElement);
+      divElement.appendChild(templateElement);
+      var bbox = divElement.getBoundingClientRect()
+      this.pdfViewerLeft = bbox.left + window.scrollX;
+      this.pdfViewerTop = bbox.top + window.scrollY;
       this.spinner.hide();
-    }, 10000);
+    }, 100);
   }
 
   deleteAnnotation(id: number) {
@@ -121,9 +162,11 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     this.bboxReady = false;
     if (filesEvent.target.files && filesEvent.target.files[0]) {
       let file: File = filesEvent.target.files[0];
+      this.file = file;
       this.fileAttr = file.name;
-      this.spinner.show();
+
       this.httpService.postData(file).subscribe((response: any) => {
+        this.spinner.show();
         var data = response.data
         var extractedPages = data.extractedPages;
         for (let page = 0; page < extractedPages.length; page++) {
@@ -137,33 +180,78 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       file.arrayBuffer().then((data: ArrayBuffer) => {
         this.fileData = data;
       })
+
+
+
     } else {
       this.fileAttr = 'Choose File';
     }
   }
 
+  uploadJsonFileEvt(filesEvent: any) {
+    this.bboxReady = false;
+    if (filesEvent.target.files && filesEvent.target.files[0]) {
+      let file: File = filesEvent.target.files[0];
+      this.jsonFileAttr = file.name;
+      // file.text()
+      file.text().then((data: any) => {
+        const jsonData = JSON.parse(data);
+        console.log(jsonData);
+        this.fillAnnotation(jsonData)
+      })
+
+    } else {
+      this.jsonFileAttr = 'Choose File';
+    }
+  }
+  fillAnnotation(jsonData: any) {
+    var data: [] = jsonData['form']
+    ELEMENT_DATA = [];
+    for (let i = 0; i < data.length; i++) {
+      var anno = data[i];
+      var box = anno['box'];
+      var annoRect = {
+        x: box[0],
+        y: box[1],
+        w: box[2] - box[0],
+        h: box[3] - box[1]
+      }
+      var words: Word[] = this.getWords(annoRect);
+      var text = '';
+      for (let i = 0; i < words.length; i++) {
+        if (text == '') {
+          text = words[i].text;
+        } else {
+          text += ' ' + words[i].text;
+        }
+      }
+      var tabAnno: Annotation = {
+        id: anno['id'],
+        label: anno['label'],
+        box: anno['box'],
+        text: text,
+        linking: anno['linking'][1],
+        words: words
+      }
+      ELEMENT_DATA.push(tabAnno)
+    }
+    this.dataSource = new MatTableDataSource<Annotation>(ELEMENT_DATA);
+  }
+
   pageRendered(event: any) {
+    console.log(event)
     setTimeout(() => {
       var pageView = event.source.viewport
       this.pdfViewerHeight = pageView?.height;
       this.pdfViewerWidth = pageView?.width;
-      var pdfViewer = document.getElementById('pdfViewer');
-      if (pdfViewer) {
-        pdfViewer.style.width = this.pdfViewerWidth + this.scrollWidth  + 'px';
-        pdfViewer.style.height = this.pdfViewerHeight  + this.scrollWidth + 'px';
-      }
-      this.pdfContainer2.nativeElement.style.width = this.pdfViewerWidth  + 'px';
-      this.pdfContainer2.nativeElement.style.height = this.pdfViewerHeight + 'px';
-      this.pdfViewerTop = this.pdfContainer2.nativeElement.offsetTop;
-      this.pdfViewerLeft = this.pdfContainer2.nativeElement.offsetLeft;
-      this.scale = Math.min(this.pdfViewerWidth, this.maxPdfViewerWidth) / this.pdfViewerWidth;
+      this.scale = 1
       this.annotationReady = true;
-      // this.showBboxes(this.textDetails)
       this.loadAnnotations()
     }, 300);
   }
 
   showBboxes() {
+    this.bboxShown = true;
     var pageDetails = this.textDetails[this.currentPage];
     var pageHeight = pageDetails.pageHeight;
     var pageWidth = pageDetails.pageWidth;
@@ -189,6 +277,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   }
 
   hideBboxes() {
+    this.bboxShown = false;
     this.bboxTemplate.clear();
   }
 
@@ -212,14 +301,12 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
 
   onMouseDown(event: MouseEvent) {
     if (this.annoStarted) {
-      console.log("Event", event)
+      // console.log("Event", event)
       this.creatingAnnotation = true;
-      console.log("left, top", this.pdfViewerLeft, this.pdfViewerTop)
-      var doc = document.getElementById('pdfContainer1')
-      if (doc) {
-        this.annotationStartX = event.pageX + doc.scrollLeft - this.pdfViewerLeft;
-        this.annotationStartY = event.pageY + doc.scrollTop - this.pdfViewerTop;
-      }
+      var viewerScroll = this.pdfViewer.pdfViewer.scroll
+      console.log("viewerScroll", viewerScroll, this.pdfViewerLeft, this.pdfViewerTop)
+      this.annotationStartX = event.pageX + viewerScroll.lastX - this.pdfViewerLeft;
+      this.annotationStartY = event.pageY + viewerScroll.lastY - this.pdfViewerTop;
       const annotation = this.template.createComponent(DragResizeAnnoComponent);
       annotation.instance.top = this.annotationStartY;
       annotation.instance.left = this.annotationStartX;
@@ -313,18 +400,20 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
 
   onMouseMove(event: any) {
 
-    if (this.annoStarted && this.creatingAnnotation && this.isValidMove(event)) {
-      var doc = document.getElementById('pdfContainer1')
-      if (doc) {
-        var height = event.pageY + doc.scrollTop - this.annotationStartY - this.pdfViewerTop;
-        var width = event.pageX + doc.scrollLeft - this.annotationStartX - this.pdfViewerLeft;
-        if (height >= 0 && height <= this.pdfViewerHeight) {
-          this.currentAnnotation.instance.height = height;
-        }
-        if (width >= 0 && width <= this.pdfViewerWidth) {
-          this.currentAnnotation.instance.width = width;
-        }
+    if (this.annoStarted && this.creatingAnnotation) {
+      var viewerScroll = this.pdfViewer.pdfViewer.scroll
+      // console.log("viewerScroll", viewerScroll)
+      var height = event.pageY + viewerScroll.lastY - this.annotationStartY - this.pdfViewerTop;
+      var width = event.pageX + viewerScroll.lastX - this.annotationStartX - this.pdfViewerLeft;
+      console.log("height: ", height, "width", width, "this.pdfHeight", this.pdfViewerHeight, "this.pdfWidth", this.pdfViewerWidth)
+      if (height >= 0 && height <= this.pdfViewerHeight) {
+        this.currentAnnotation.instance.height = height;
       }
+      if (width >= 0 && width <= this.pdfViewerWidth) {
+        this.currentAnnotation.instance.width = width;
+      }
+
+
       event.stopPropagation();
     }
   }
@@ -404,13 +493,15 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   }
 
   afterLoadComplete(event: any) {
-    console.log("load complete", event)
+    // console.log("load complete", event)
     this.currentPage = 1;
     this.totalPages = event._pdfInfo.numPages;
     this.annotationRefDict = {}
     this.template.clear()
     this.loadAnnotations()
-    console.log("totalPages", this.totalPages)
+    // console.log("totalPages", this.totalPages)
+
+
   }
 
   deleteAnnotationRef(id: number) {
@@ -515,10 +606,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     console.log(exportData)
     // Create a Blob object to represent the JSON data
     const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
-
     // Create a download link for the Blob
     const url = window.URL.createObjectURL(blob);
-
     // Create a link element and trigger the download
     const a = document.createElement('a');
     a.href = url;
@@ -528,6 +617,22 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
+  }
+
+  downloadImage() {
+    this.httpService.downloadImage(this.file, this.currentPage).subscribe((response: any) => {
+      const blob = new Blob([response], { type: 'application/png' });
+      // Create a download link for the Blob
+      const url = window.URL.createObjectURL(blob);
+      // Create a link element and trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'data.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    })
   }
 
 }
