@@ -71,6 +71,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   @ViewChild('viewContainer') viewContainer: ElementRef;
   @ViewChild("pdfViewer", { static: true }) pdfViewerElement: ElementRef;
   annotationRefDict: { [key: number]: ComponentRef<DragResizeAnnoComponent>[] } = {};
+  bboxRefDict: { [key: number]: ComponentRef<BboxComponent>[] } = {};
   textDetails: { [key: number]: any } = {}
   labels: any = [
     { labelId: 1, label: 'question', zIndex: 'auto' },
@@ -85,7 +86,6 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   linkageStarted = false;
   bboxReady = false;
   bboxShown = false;
-
   error: any;
   rotation = 0;
   zoom = 1.0;
@@ -93,7 +93,6 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   originalSize = false;
   pdf: any;
   renderText = false;
-  progressData!: PDFProgressData;
   isLoaded = false;
   stickToPage = false;
   showAll = false;
@@ -103,6 +102,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   isOutlineShown = false;
   pdfQuery = '';
   mobile = false;
+  pdfContainer: any;
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
@@ -119,16 +119,77 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
 
   }
 
-  ngOnInit() {
+  reset() {
+    this.linkageStarted = false;
+    this.bboxReady = false;
+    this.bboxShown = false;
+    this.error = null;
+    this.rotation = 0;
+    this.zoom = 1.0;
+    this.zoomScale = 'page-width';
+    this.originalSize = false;
+    this.pdf = null;
+    this.renderText = false;
+    this.isLoaded = false;
+    this.stickToPage = false;
+    this.showAll = false;
+    this.autoresize = false;
+    this.fitToPage = false;
+    this.outline = [];
+    this.isOutlineShown = false;
+    this.pdfQuery = '';
+    this.mobile = false;
+    this.file = new File([], '');
+    this.fileAttr = null;
+    this.fileData = null;
+    this.jsonFileAttr = null;
+    this.jsonFileData = null;
+    this.currentElement = null;
+    this.pdfViewerWidth = NaN;
+    this.pdfViewerHeight = NaN;
+    this.maxPdfViewerWidth = 716;
+    this.maxPdfViewerHeight = 1056;
+    this.pdfViewerTop = NaN;
+    this.pdfViewerLeft = NaN;
+    this.currentId = 1;
+    this.creatingAnnotation = false;
+    this.annotationStartX = NaN;
+    this.annotationStartY = NaN;
+    this.currentPage = 1;
+    this.totalPages = 1;
+    this.scale = 1;
+    this.currentAnnotation = this.template.createComponent(DragResizeAnnoComponent);
+    this.pdfContainer1ZIndex = 'auto';
+    this.annoStarted = false;
+    this.annotationReady = false;
+    this.currentLabelId = NaN;
+    this.scrollWidth = 10;
+    this.annotationRefDict = {};
+    this.bboxRefDict = {};
+    this.textDetails = {}
+    this.labels = [
+      { labelId: 1, label: 'question', zIndex: 'auto' },
+      { labelId: 2, label: 'answer', zIndex: 'auto' },
+      { labelId: 3, label: 'header', zIndex: 'auto' },
+      { labelId: 4, label: 'other', zIndex: 'auto' }
+    ]
+    ELEMENT_DATA = []
+    this.dataSource = new MatTableDataSource<Annotation>(ELEMENT_DATA);
+    this.currentLinkAnno = this.template.createComponent(DragResizeAnnoComponent).instance;
+  }
 
-    
+  ngOnInit() {
     setTimeout(() => {
       const bboxTemplateElement = this.bboxTemplate.element.nativeElement;
       const templateElement = this.template.element.nativeElement;
-      const divElement = document.getElementsByClassName('ng2-pdf-viewer-container')[0];
-      divElement.appendChild(bboxTemplateElement);
-      divElement.appendChild(templateElement);
-      var bbox = divElement.getBoundingClientRect()
+      this.pdfContainer = document.getElementsByClassName('ng2-pdf-viewer-container')[0];
+      
+      this.pdfContainer.appendChild(bboxTemplateElement);
+      this.pdfContainer.appendChild(templateElement);
+      this.pdfContainer.addEventListener("mousedown", (event: any) => { this.onMouseDown(event) });
+      this.pdfContainer.addEventListener("mousemove", (event: any) => { this.onMouseMove(event) });
+      this.pdfContainer.addEventListener("mouseup", (event: any) => { this.onMouseUp(event) });
+      var bbox = this.pdfContainer.getBoundingClientRect()
       this.pdfViewerLeft = bbox.left + window.scrollX;
       this.pdfViewerTop = bbox.top + window.scrollY;
       this.spinner.hide();
@@ -159,6 +220,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   }
 
   uploadFileEvt(filesEvent: any) {
+    this.reset();
     this.bboxReady = false;
     if (filesEvent.target.files && filesEvent.target.files[0]) {
       let file: File = filesEvent.target.files[0];
@@ -250,8 +312,7 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     }, 300);
   }
 
-  showBboxes() {
-    this.bboxShown = true;
+  loadBBoxes() {
     var pageDetails = this.textDetails[this.currentPage];
     var pageHeight = pageDetails.pageHeight;
     var pageWidth = pageDetails.pageWidth;
@@ -272,8 +333,13 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       bbox.instance.y = wordRect.y;
       bbox.instance.w = wordRect.w;
       bbox.instance.h = wordRect.h;
-
     }
+  }
+
+  showBboxes() {
+    this.bboxShown = true;
+    this.bboxTemplate.clear();
+    this.loadBBoxes();
   }
 
   hideBboxes() {
@@ -288,10 +354,10 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       for (const key in items) {
         var anno1 = items[key];
         var anno2 = this.template.createComponent(DragResizeAnnoComponent);
-        anno2.instance.top = anno1.instance.top
-        anno2.instance.left = anno1.instance.left
-        anno2.instance.width = anno1.instance.width
-        anno2.instance.height = anno1.instance.height
+        anno2.instance.top = anno1.instance.top * this.zoom;
+        anno2.instance.left = anno1.instance.left * this.zoom;
+        anno2.instance.width = anno1.instance.width * this.zoom;
+        anno2.instance.height = anno1.instance.height * this.zoom;
         anno2.instance.id = anno1.instance.id
         anno2.instance.color = anno1.instance.color
 
@@ -308,8 +374,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
       this.annotationStartX = event.pageX + viewerScroll.lastX - this.pdfViewerLeft;
       this.annotationStartY = event.pageY + viewerScroll.lastY - this.pdfViewerTop;
       const annotation = this.template.createComponent(DragResizeAnnoComponent);
-      annotation.instance.top = this.annotationStartY;
-      annotation.instance.left = this.annotationStartX;
+      annotation.instance.top = this.annotationStartY * this.zoom;
+      annotation.instance.left = this.annotationStartX * this.zoom;
       annotation.instance.width = 0;
       annotation.instance.height = 0;
       annotation.instance.id = this.currentId;
@@ -436,10 +502,10 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
         this.currentAnnotation.instance.width = 10;
       }
       var annotationRect = {
-        x: this.currentAnnotation.instance.left,
-        y: this.currentAnnotation.instance.top,
-        w: this.currentAnnotation.instance.width,
-        h: this.currentAnnotation.instance.height
+        x: this.currentAnnotation.instance.left * this.zoom,
+        y: this.currentAnnotation.instance.top * this.zoom,
+        w: this.currentAnnotation.instance.width * this.zoom,
+        h: this.currentAnnotation.instance.height * this.zoom
       }
       var words = this.getWords(annotationRect);
       this.currentAnnotation.instance.words = words;
@@ -464,8 +530,8 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     var pageDetails = this.textDetails[this.currentPage];
     var pageHeight = pageDetails.pageHeight;
     var pageWidth = pageDetails.pageWidth;
-    var yRatio = this.pdfViewerHeight / pageHeight;
-    var xRatio = this.pdfViewerWidth / pageWidth;
+    var yRatio = this.pdfViewerHeight / pageHeight * this.zoom;
+    var xRatio = this.pdfViewerWidth / pageWidth * this.zoom;
     var textDetails = pageDetails.textDetails;
     for (let t = 0; t < textDetails.length; t++) {
       var pdfWord = textDetails[t];
@@ -493,6 +559,9 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   }
 
   afterLoadComplete(event: any) {
+    var bbox = this.pdfContainer.getBoundingClientRect()
+    this.pdfViewerLeft = bbox.left + window.scrollX;
+    this.pdfViewerTop = bbox.top + window.scrollY;
     // console.log("load complete", event)
     this.currentPage = 1;
     this.totalPages = event._pdfInfo.numPages;
@@ -500,7 +569,6 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
     this.template.clear()
     this.loadAnnotations()
     // console.log("totalPages", this.totalPages)
-
 
   }
 
@@ -519,11 +587,42 @@ export class Ng2PdfViewerComponent implements AfterViewInit {
   goToNextPage() {
     this.currentPage++;
     this.loadAnnotations()
+    if (this.bboxShown) {
+      this.showBboxes();
+    }
   }
 
   goToPreviousPage() {
     this.currentPage--;
     this.loadAnnotations()
+    if (this.bboxShown) {
+      this.showBboxes();
+    }
+  }
+
+  zoomIn() {
+    console.log("zoom", this.zoom)
+    if (this.zoom < 5) {
+      this.zoom += 0.5;
+      this.pdfViewer.pdfViewer.increaseScale(0.5);
+      if (this.bboxShown) {
+        this.showBboxes();
+      }
+      this.loadAnnotations();
+    }
+
+  }
+  zoomOut() {
+    console.log("zoom", this.zoom)
+    if (this.zoom > 1) {
+      this.zoom -= 0.5;
+      this.pdfViewer.pdfViewer.decreaseScale(0.5);
+      if (this.bboxShown) {
+        this.showBboxes();
+      }
+      this.loadAnnotations();
+    }
+
   }
 
   onAnnoClose() {

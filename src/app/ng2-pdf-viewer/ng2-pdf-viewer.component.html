@@ -104,10 +104,14 @@
     <div #viewContainer class="view-container">
         <div class="pdf-pagination-container">
             <div>
+                <button mat-icon-button [disabled]="fileData==null || zoom==1.0" (click)="zoomOut()">
+                    <mat-icon>zoom_out</mat-icon>
+                </button>
                 <button mat-icon-button [disabled]="currentPage==1" (click)="goToPreviousPage()">
                     <mat-icon>keyboard_arrow_left</mat-icon>
                 </button>
             </div>
+            
             <div style="padding: 10px;">
                 {{currentPage}}/{{totalPages}}
             </div>
@@ -115,11 +119,13 @@
                 <button mat-icon-button [disabled]="currentPage==totalPages" (click)="goToNextPage()">
                     <mat-icon>keyboard_arrow_right</mat-icon>
                 </button>
+                <button mat-icon-button [disabled]="fileData==null || zoom==5.0" (click)="zoomIn()">
+                    <mat-icon>zoom_in</mat-icon>
+                </button>
             </div>
         </div>
         <div id="pdfContainer1" class="pdf-container1" [style.z-index]="pdfContainer1ZIndex">
-            <div #pdfContainer2 id="pdfContainer2" class="pdf-container2" (mousedown)="onMouseDown($event)"
-                (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp($event)">
+            <div #pdfContainer2 id="pdfContainer2" class="pdf-container2">
                 <ng-template #bboxTemplate class="pdf-template"></ng-template>
                 <ng-template #template class="pdf-template"></ng-template>
                 <pdf-viewer id="pdfViewer" class="pdf-viewer" [src]="fileData" [(page)]="currentPage"
@@ -127,7 +133,7 @@
                     (after-load-complete)="afterLoadComplete($event)" [zoom]="zoom" [zoom-scale]="zoomScale"
                     [stick-to-page]="stickToPage" [render-text]="renderText" [external-link-target]="'blank'"
                     [autoresize]="autoresize" (page-rendered)="pageRendered($event)"
-                    (after-load-complete)="afterLoadComplete($event)" [show-borders]="false"></pdf-viewer>
+                    (after-load-complete)="afterLoadComplete($event)" [show-borders]="false" ></pdf-viewer>
             </div>
         </div>
         <div></div>
